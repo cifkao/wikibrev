@@ -4,12 +4,13 @@ from distutils.core import setup, Extension
 from Cython.Build import cythonize
 
 setup(
-        name="unzim",
-        py_modules = ['unzim'],
+        name="wikibrev",
+        packages = ['wikibrev'],
         ext_modules = cythonize(Extension(
-            "_unzim",
-            sources=["_unzim.pyx"],
+            "wikibrev._unzim",
+            sources=["wikibrev/_unzim.pyx"],
             libraries=["zim", "stdc++"],
             language="c++",
-)))
-
+        )),
+        scripts=['bin/wikibrev']
+)
