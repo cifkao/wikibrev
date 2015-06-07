@@ -11,7 +11,8 @@ class AutoZip(object):
     _tmpdir = None
     _read_only = True
 
-    def __init__(self, path, tmpdir='/tmp', readonly=False):
+    def __init__(self, path, tmpdir=None, readonly=False):
+        if tmpdir is None: tmpdir = '/tmp'
         self.original_path = path
         self._tmpdir = tmpdir
         self._read_only = readonly

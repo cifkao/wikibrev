@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 from __future__ import unicode_literals
 import os
 import sys
@@ -12,7 +11,6 @@ import Queue
 import shutil
 import tempfile
 import sqlite3
-import gzip
 import unzim
 from HTMLParser import HTMLParser
 
@@ -105,9 +103,7 @@ class WikiHTMLParser(HTMLParser):
             return False
 
         if len(abbr) > len(exp):
-            tmp = abbr
-            abbr = exp
-            exp = tmp
+            (abbr, exp) = (exp, abbr)
 
         # too long or too short:
         if len(abbr) < 2:
@@ -144,35 +140,15 @@ def thread_init():
 def process_article(index, data, result_q):
     try:
         result_q.put(parser.parse_page(index, data))
-        #result_q.put({'index': index, 'links': []})
     except:
-        print "Error during parsing:", sys.exc_info()
+        print >>sys.stderr, "Error during parsing:", sys.exc_info()
         result_q.put(None)
         raise
 
-def compress_file(fname_in, fname_out):
-    f_in = open(fname_in, 'rb')
-    f_out = gzip.open(fname_out, 'wb')
-    f_out.writelines(f_in)
-    f_out.close()
-    f_in.close()
-
-if __name__ == '__main__':
-    UTF8Writer = codecs.getwriter('utf8')
-    sys.stdout = UTF8Writer(sys.stdout)
-
-    zim_path = "../wikidumps/wikipedia_en_all_nopic.zim"
+def extract_links(zim_path, db_path, n_threads):
     dump = unzim.File(zim_path).articles()
 
-    #parser = WikiHTMLParser()
-
-    tmpdir = '/mnt/h/tmp/cifka/'
-    dbfname = 'articles.db'
-    dbpath = os.path.join(tmpdir, dbfname)
-    if not os.path.exists(tmpdir):
-        os.makedirs(tmpdir)
-
-    dbconn = sqlite3.connect(dbpath)
+    dbconn = sqlite3.connect(db_path)
     db = dbconn.cursor()
 
     try:
@@ -194,8 +170,8 @@ if __name__ == '__main__':
 
         t = time.time()
 
-        print "Reading and processing articles"
-        pool = multiprocessing.Pool(8, initializer=thread_init, maxtasksperchild=1000)
+        print >>sys.stderr, "Reading and processing articles"
+        pool = multiprocessing.Pool(n_threads, initializer=thread_init, maxtasksperchild=1000)
         mgr = multiprocessing.Manager()
         result_q = mgr.Queue()
 
@@ -224,10 +200,9 @@ if __name__ == '__main__':
 
                             if n_read % 500 == 0:
                                 dbconn.commit()
-                                sys.stdout.flush()
                 except StopIteration:
                     done_reading = True
-                    print "Finished reading articles"
+                    print >>sys.stderr, "Finished reading articles"
 
             try:
                 while n_done < n_read:
@@ -240,9 +215,9 @@ if __name__ == '__main__':
                     if n_done % 2000 == 0:
                         dbconn.commit()
                     if n_done % 2000 == 0:
-                        print n_done, 'done'
-                        print 'speed:', n_done/(time.time()-t), 'per second'
-                        print 'time per article:', (time.time()-t)/n_done
+                        print >>sys.stderr, n_done, 'done'
+                        print >>sys.stderr, 'speed:', n_done/(time.time()-t), 'per second'
+                        print >>sys.stderr, 'time per article:', (time.time()-t)/n_done
                         sys.stdout.flush()
             except Queue.Empty:
                 if done_reading:
@@ -251,40 +226,29 @@ if __name__ == '__main__':
 
         dbconn.commit()
 
-        print 'Processed', n_read, 'articles'
-        print n_links, 'links'
-        print n_redirs, 'redirects'
-        print 'Took', time.time()-t, 's'
+        print >>sys.stderr, 'Processed', n_read, 'articles'
+        print >>sys.stderr, n_links, 'links'
+        print >>sys.stderr, n_redirs, 'redirects'
+        print >>sys.stderr, 'Took', time.time()-t, 's'
         t = time.time()
 
-        print
-        print "Resolving links"
+        print >>sys.stderr
+        print >>sys.stderr, "Resolving links"
         
         db.execute('update link set tgt_id = (select id from article where url = link.tgt_url)')
         dbconn.commit()
 
-        print 'Resolved', db.rowcount, 'links'
-        print 'Took', time.time()-t, 's'
+        print >>sys.stderr, 'Resolved', db.rowcount, 'links'
+        print >>sys.stderr, 'Took', time.time()-t, 's'
         t = time.time()
 
-        print
-        print "Removing unresolved links"
+        print >>sys.stderr 
+        print >>sys.stderr, "Removing unresolved links"
 
         db.execute('delete from link where tgt_id is null')
         dbconn.commit()
 
-        print 'Removed', db.rowcount, 'links'
-        print 'Took', time.time()-t, 's'
+        print >>sys.stderr, 'Removed', db.rowcount, 'links'
+        print >>sys.stderr, 'Took', time.time()-t, 's'
     finally:
         dbconn.close()
-
-        print
-        print 'Compressing database'
-        try:
-            newdbpath = os.path.join(os.getcwd(), dbfname + '.gz')
-            if os.path.exists(newdbpath):
-                os.remove(newdbpath)
-            compress_file(dbpath, newdbpath)
-            print 'Compressed database is in', newdbpath
-        finally:
-            os.remove(dbpath)

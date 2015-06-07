@@ -1,11 +1,10 @@
-#!/usr/bin/env python
 from __future__ import unicode_literals
 import sqlite3
 import os
 import sys
 import codecs
 import re
-from autozip import AutoZip
+from ask import ask_yes_no
 from contextlib import closing
 
 re_whitespace = re.compile(r'\s+')
@@ -91,48 +90,50 @@ def get_abbr(abbr, exp, idx):
     
     return (idx, abbr, exp)
 
-if __name__ == '__main__':
-    UTF8Writer = codecs.getwriter('utf8')
-    sys.stdout = UTF8Writer(sys.stdout)
+def make_abbrevs(dbpath):
+    with closing(sqlite3.connect(dbpath)) as dbconn:
+        db = dbconn.cursor()
+        if db.execute("select count(*) from sqlite_master where type='table' and name='abbrev'").fetchone()[0] > 0:
+            if ask_yes_no(sys.stderr, "Table 'abbrev' already exists; do you wish to drop it?"):
+                db.execute('drop table abbrev')
+            else:
+                print >>sys.stderr, 'Aborting'
+                return
+        db.execute("""create table abbrev (article_id integer,
+                                           abbr text not null,
+                                           exp text not null,
+                                           foreign key (article_id) references article(id),
+                                           unique(article_id, abbr, exp))""")
+        db.execute('create index abbrev_article_id on abbrev(article_id)')
+        db.execute('create index abbrev_abbr on abbrev(abbr)')
+        db.execute('create index abbrev_exp on abbrev(exp)')
 
-    dbpath = '/a/LRC_TMP/cifka/articles.db'
-    
-    with AutoZip(dbpath, tmpdir='/mnt/h/tmp', readonly=True) as auto_dbpath:
-        with closing(sqlite3.connect(auto_dbpath)) as dbconn:
-            db = dbconn.cursor()
-            db.execute('drop table if exists abbrev')
-            db.execute("""create table abbrev (article_id integer,
-                                               abbr text not null,
-                                               exp text not null,
-                                               foreign key (article_id) references article(id),
-                                               unique(article_id, abbr, exp))""")
- 
 
-            def abbrevs():
-                db2 = dbconn.cursor() # the other cursor is being used for inserting, must use a different one!
-                links = db2.execute('select distinct L.text, A.title, A.id from link L join article a on L.tgt_id = A.id')
+        def abbrevs():
+            db2 = dbconn.cursor() # the other cursor is being used for inserting, must use a different one!
+            links = db2.execute('select distinct L.text, A.title, A.id from link L join article a on L.tgt_id = A.id')
 
-                n_done = 0
-                for (a, b, idx) in links:
-                    if check_abbr(a, b):
-                        yield get_abbr(a, b, idx)
-                        n_done += 1
+            n_done = 0
+            for (a, b, idx) in links:
+                if check_abbr(a, b):
+                    yield get_abbr(a, b, idx)
+                    n_done += 1
 
-                        if n_done % 1000 == 0:
-                            print n_done, 'abbrevs collected'
-                            sys.stdout.flush()
-                print 'Done processing links'
+                    if n_done % 1000 == 0:
+                        print >>sys.stderr, n_done, 'abbrevs collected'
+                        sys.stdout.flush()
+            print >>sys.stderr, 'Done processing links'
 
-                redirs = db2.execute('select distinct A.title, R.title, A.id from article A join article R on A.redirect_id = R.id')
+            redirs = db2.execute('select distinct A.title, R.title, A.id from article A join article R on A.redirect_id = R.id')
 
-                for (a, b, idx) in redirs:
-                    if check_abbr(a, b):
-                        yield get_abbr(a, b, idx)
-                        n_done += 1
+            for (a, b, idx) in redirs:
+                if check_abbr(a, b):
+                    yield get_abbr(a, b, idx)
+                    n_done += 1
 
-                        if n_done % 1000 == 0:
-                            print n_done, 'abbrevs collected'
-                print 'Done processing redirects'
+                    if n_done % 1000 == 0:
+                        print >>sys.stderr, n_done, 'abbrevs collected'
+            print >>sys.stderr, 'Done processing redirects'
 
-            db.executemany('insert or ignore into abbrev values(?,?,?)', abbrevs())
-            dbconn.commit()
+        db.executemany('insert or ignore into abbrev values(?,?,?)', abbrevs())
+        dbconn.commit()
