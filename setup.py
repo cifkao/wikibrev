@@ -27,5 +27,5 @@ setup(
         packages = ['wikibrev'],
         ext_modules = extensions,
         scripts=['bin/wikibrev'],
-        install_requires=['magic']
+        install_requires=['filemagic']
 )
