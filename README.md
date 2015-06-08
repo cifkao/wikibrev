@@ -36,3 +36,43 @@ Options:
   show help and exit
 * `-t THREADS`, `--threads THREADS`  
   the maximum number of threads to use (default: 8)
+
+#### zim2db
+
+    wikibrev zim2db [-h] [-c] [-t THREADS] INPUT OUTPUT
+    
+Read a ZIM dump from `INPUT` and an intermediate database of articles and links is created in `OUTPUT`.
+
+Options:
+* `-h`, `--help`  
+  show help message and exit
+* `-c`, `--compress`  
+  compress the database using gzip
+* `-t THREADS`, `--threads THREADS`  
+  the maximum number of threads to use (default: 8)
+
+#### db2abbr-db
+
+    wikibrev db2abbr-db [-h] INPUT
+
+Read a database (possibly compressed) created by _zim2db_, collect abbreviations from it and add them to the database.
+
+
+Options:
+* `-h`, `--help`  
+  show help message and exit
+
+#### zim2abbr-db
+
+    wikibrev zim2abbr-db [-h] [-c] [-t THREADS] INPUT OUTPUT
+
+The _zim2db_ and _db2abbr-db_ steps combined into one action. A ZIM dump is read from `INPUT` and a database of articles, links and abbreviations is created in `OUTPUT`.
+
+Options:
+* `-h`, `--help`  
+  show help message and exit
+* `-c`, `--compress`  
+  compress the database using gzip
+* `-t THREADS`, `--threads THREADS`  
+  the maximum number of threads to use (default: 8)
+
