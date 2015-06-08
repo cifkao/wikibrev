@@ -23,11 +23,11 @@ Options:
   the path to a temporary directory
 
 ### Actions
-#### `zim2list`
+#### zim2list
 
     wikibrev zim2list [-h] [-t THREADS] INPUT [OUTPUT]
 
-This is the easiest way to use Wikibrev. A ZIM dump is be read from `INPUT` and a list of abbreviations is written to
+This is the easiest way to use Wikibrev. A ZIM dump is read from `INPUT` and a list of abbreviations is written to
 the standard output (or `OUTPUT`, if specified). The output is in the TSV format, with an abbreviation and its
 expansion on each line, separated by a tab.
 
