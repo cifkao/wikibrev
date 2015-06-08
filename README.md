@@ -76,3 +76,12 @@ Options:
 * `-t THREADS`, `--threads THREADS`  
   the maximum number of threads to use (default: 8)
 
+#### abbr-db2list
+
+    wikibrev abbr-db2list [-h] INPUT [OUTPUT]
+    
+Read a database of abbreviations (possibly compressed) from `INPUT` and output it in the same format as _zim2list_.
+    
+Options:
+* `-h`, `--help`  
+  show help message and exit
