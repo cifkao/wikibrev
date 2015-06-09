@@ -10,6 +10,11 @@ To install Wikibrev, download the sources and run:
 
     python setup.py install
 
+To install without root privileges, run:
+
+    python setup.py build_ext --user
+    python setup.py install --user
+
 Usage
 -----
 Wikibrev is run from the terminal:
