@@ -1,3 +1,8 @@
+"""
+Provides a make_abbrevs function that searches a database for abbreviations and
+inserts them into a new table in the database.
+"""
+
 from __future__ import unicode_literals
 import sqlite3
 import os
@@ -17,9 +22,18 @@ re_html_ext = re.compile(r'\.html?$')
 re_brackets = re.compile(r'\s*\(.*\)\s*')
 
 def tokenize(txt):
+    """
+    Separate tokens and remove redundant whitespace.
+    """
     return re_whitespace.sub(' ', re_token.sub(r' \1', txt).strip())
 
 def check_abbr(abbr, exp):
+    """
+    Return True if `abbr` is an abbreviation of `exp`. `abbr` is considered an
+    abbreviation of `exp` if it can be created from `exp` by removing some
+    letters while preserving the first one, and if it satisfies some additional
+    conditions.
+    """
     # remove brackets (incl. contents)
     abbr = re_brackets.sub('', abbr)
     exp = re_brackets.sub('', exp)
@@ -82,6 +96,10 @@ def check_abbr(abbr, exp):
     return False
 
 def get_abbr(abbr, exp, idx):
+    """
+    Create a database record for an abbreviation and its expansion (they need
+    not be passed in the right order).
+    """
     abbr = re_brackets.sub('', abbr)
     exp = re_brackets.sub('', exp)
 
@@ -91,6 +109,11 @@ def get_abbr(abbr, exp, idx):
     return (idx, abbr, exp)
 
 def make_abbrevs(dbpath):
+    """
+    Search a database containing the tables `article` and `link` for
+    abbreviations and insert them into a new table named `abbrev` in the
+    database.
+    """
     with closing(sqlite3.connect(dbpath)) as dbconn:
         db = dbconn.cursor()
         if db.execute("select count(*) from sqlite_master where type='table' and name='abbrev'").fetchone()[0] > 0:
@@ -109,8 +132,12 @@ def make_abbrevs(dbpath):
         db.execute('create index abbrev_exp on abbrev(exp)')
 
 
+        # A generator function that yields abbreviations:
         def abbrevs():
             db2 = dbconn.cursor() # the other cursor is being used for inserting, must use a different one!
+
+            # Go through all links and collect abbreviation--expansion pairs.
+
             links = db2.execute('select distinct L.text, A.title, A.id from link L join article a on L.tgt_id = A.id')
 
             n_done = 0
@@ -123,6 +150,8 @@ def make_abbrevs(dbpath):
                         print >>sys.stderr, n_done, 'abbrevs collected'
                         sys.stdout.flush()
             print >>sys.stderr, 'Done processing links'
+
+            # Go through redirects.
 
             redirs = db2.execute('select distinct A.title, R.title, A.id from article A join article R on A.redirect_id = R.id')
 

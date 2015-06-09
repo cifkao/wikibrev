@@ -1,3 +1,8 @@
+"""
+Provides an `extract_links` function that extracts articles and links from a
+ZIM dump and saves them into a database.
+"""
+
 from __future__ import unicode_literals
 import os
 import sys
@@ -15,6 +20,11 @@ import unzim
 from HTMLParser import HTMLParser
 
 class WikiHTMLParser(HTMLParser):
+    """
+    An HTML parser that extracts links from a Wikipedia page that are
+    candidates for abbreviation--expansion pairs.
+    """
+
     t = time.time()
 
     index = None
@@ -95,6 +105,10 @@ class WikiHTMLParser(HTMLParser):
 
 
     def check_abbr_triv(self, abbr, exp):
+        """
+        Check whether a link should be included in the database.
+        """
+
         # remove brackets (incl. contents)
         abbr = self.re_brackets.sub('', abbr)
         exp = self.re_brackets.sub('', exp)
@@ -146,6 +160,11 @@ def process_article(index, data, result_q):
         raise
 
 def extract_links(zim_path, db_path, n_threads):
+    """
+    Extract articles and links from a ZIM dump and store them in a database.
+    To limit the size of the database, only "promising" links are preserved.
+    """
+
     dump = unzim.File(zim_path).articles()
 
     dbconn = sqlite3.connect(db_path)

@@ -1,3 +1,19 @@
+"""
+This module abstracts away the compression of a file. Given a file path,
+AutoZip detects whether it has been compressed using gzip. If yes, AutoZip
+decompresses the file into a temporary location and makes this location
+available through the `path` function. If the file is not compressed, the
+`path` function returns the original path of the file. The `close` function
+must be called to remove the temporary file and save it compressed in the
+original location.
+
+AutoZip can also be used as a context manager in the following way:
+
+    with AutoZip(path) as new_path:
+        # do something with new_path
+
+"""
+
 import os
 import re
 import magic
